@@ -4,35 +4,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Generate graphs from TCP flavors CSV data.")
-    parser.add_argument(
-        '-i', '--input',
-        type=str,
-        default="combined_results.csv",
-        help="Input CSV file name (default: combined_results.csv)",
-    )
-    parser.add_argument(
-        '-o', '--output-dir',
-        type=str,
-        default="graphs",
-        help="Output directory for graphs (default: graphs)",
-    )
-    args = parser.parse_args()
-    input_file = args.input
-    output_dir = args.output_dir
-
-    os.makedirs(output_dir, exist_ok=True)
-    df = pd.read_csv(input_file)
-    df["throughput_mbps"] = df["bits_per_second"] / 1_000_000
-
-    # Get the unique test name and flavors for titles and looping
-    test_name = df["test_name"].unique()[0]
+def generate_graphs(df, test_name, output_dir):
+    df = df[df["test_name"] == test_name]
     flavors = df["tcp_flavor"].unique()
 
     # Graph 1: Combined Throughput over Time
-    print("Generating Graph 1: Combined Throughput...")
     plt.style.use("seaborn-v0_8-notebook")
     fig1, ax1 = plt.subplots(figsize=(12, 7))
 
@@ -59,7 +35,6 @@ def main():
     print(f"Saved: {filename1}")
 
     # --- Graph 2: Combined CWND over Time ---
-    print("Generating Graph 2: Combined CWND...")
     fig2, ax2 = plt.subplots(figsize=(12, 7))
 
     for flavor in flavors:
@@ -84,7 +59,6 @@ def main():
     print(f"Saved: {filename2}")
 
     # --- Graphs 3, 4, 5: Per-flavor analysis ---
-    print("Generating per-flavor graphs...")
     for flavor in flavors:
         flavor_df = df[df["tcp_flavor"] == flavor]
 
@@ -147,6 +121,36 @@ def main():
         plt.savefig(filename4)
         plt.close(fig4)
         print(f"Saved: {filename4}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate graphs from TCP flavors CSV data.")
+    parser.add_argument(
+        '-i', '--input',
+        type=str,
+        default="combined_results.csv",
+        help="Input CSV file name (default: combined_results.csv)",
+    )
+    parser.add_argument(
+        '-o', '--output-dir',
+        type=str,
+        default="graphs",
+        help="Output directory for graphs (default: graphs)",
+    )
+    args = parser.parse_args()
+    input_file = args.input
+    output_dir = args.output_dir
+
+    os.makedirs(output_dir, exist_ok=True)
+    df = pd.read_csv(input_file)
+    df["throughput_mbps"] = df["bits_per_second"] / 1_000_000
+
+    # Get the unique test name and flavors for titles and looping
+    test_names = df["test_name"].unique()
+    for test_name in test_names:
+        print(f"\nProcessing graphs for test: {test_name}")
+        generate_graphs(df, test_name, output_dir)
 
     print("\nAll graphs have been generated and saved successfully.")
 
