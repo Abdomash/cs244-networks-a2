@@ -25,7 +25,7 @@ mkdir -p "$OUTPUT_DIR"
 cd "$OUTPUT_DIR" || exit 1
 
 # Config
-TEST_DURATION=30 # in seconds
+TEST_DURATION=120 # in seconds
 SAMPLE_INTERVAL=1  # in seconds
 
 # TCP flavors
@@ -73,6 +73,7 @@ for flavor in "${TCP_FLAVORS[@]}"; do
 		-b 0 \
 		-B "$CLIENT_IP" \
 		-i "$SAMPLE_INTERVAL" \
+		-O 4 \
 		-J >"$IPERF_LOG" &
 	IPERF_PID=$!
 
@@ -106,7 +107,7 @@ for flavor in "${TCP_FLAVORS[@]}"; do
 	echo "ping and CWND done."
 
 	# Avoid flooding network with tests
-	sleep 3
+	sleep 5
 done
 
 echo
