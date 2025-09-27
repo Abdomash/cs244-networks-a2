@@ -48,14 +48,15 @@ echo "Server IP: $SERVER_IP"
 
 for flavor in "${TCP_FLAVORS[@]}"; do
 	echo
-	echo "--- Testing flavor: $flavor on interface: $NIC_NAME"
+	echo "--- Testing $flavor"
 
 	# Set TCP flavor
-	echo "Setting TCP flavor to $flavor"
+	echo "Setting System TCP flavor to $flavor"
 	sysctl -w net.ipv4.tcp_congestion_control=$flavor
 
+	# Create flavor directory
+	echo "Creating directory for $flavor results"
 	mkdir -p "$flavor"
-
 	IPERF_LOG="$flavor/iperf3.json"
 	PING_LOG="$flavor/ping.log"
 	CWND_LOG="$flavor/cwnd.log"
@@ -83,7 +84,7 @@ for flavor in "${TCP_FLAVORS[@]}"; do
 	PING_PID=$!
 
 	# Start a loop to poll CWND
-	echo "Starting CWND monitoring..."
+	echo "Starting CWND polling..."
 	(
 		# Wait until iperf connects first
 		sleep 3
@@ -110,7 +111,8 @@ done
 
 echo
 echo "--- Experiment finished ---"
-echo "All tests are complete. Results are in $OUTPUT_DIR."
+echo "All tests are done."
+echo "Results in $OUTPUT_DIR."
 
 # Reset original TCP flavor
 echo "Restoring original TCP flavor to $ORIG_FLAVOR"
