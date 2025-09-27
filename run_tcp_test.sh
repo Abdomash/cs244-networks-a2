@@ -25,7 +25,9 @@ mkdir -p "$OUTPUT_DIR"
 cd "$OUTPUT_DIR" || exit 1
 
 # Config
-TEST_DURATION=120 # in seconds
+SERVER_PORT=5201
+CLIENT_PORT=5202
+TEST_DURATION=30 # in seconds
 SAMPLE_INTERVAL=1  # in seconds
 
 # TCP flavors
@@ -72,6 +74,7 @@ for flavor in "${TCP_FLAVORS[@]}"; do
 		-t "$TEST_DURATION" \
 		-b 0 \
 		-B "$CLIENT_IP" \
+		--cport "$CLIENT_PORT" \
 		-i "$SAMPLE_INTERVAL" \
 		-O 4 \
 		-J >"$IPERF_LOG" &
@@ -89,11 +92,25 @@ for flavor in "${TCP_FLAVORS[@]}"; do
 	(
 		# Wait until iperf connects first
 		sleep 3
+		
+		I=0
+		while true; do
+		    CONN_INFO=$(ss -ti "src $CLIENT_IP:$CLIENT_PORT")
 
-		for ((i = 0; i < TEST_DURATION; i++)); do
-			CWND=$(ss -ti "dst $SERVER_IP:5201" | grep -m 1 -oP 'cwnd:\K\d+')
-			echo "$i,$CWND" >>"$CWND_LOG"
-			sleep "$SAMPLE_INTERVAL"
+		    # Breaks when iperf3 is done
+		    if [ -z "$CONN_INFO" ]; then
+			break
+		    fi
+
+		    # Extract the CWND value
+		    CWND=$(echo "$CONN_INFO" | grep -oP 'cwnd:\K\d+' | head -n 1)
+		    
+		    if [ -n "$CWND" ]; then
+			echo "$I,$CWND" >> "$CWND_LOG"
+		    fi
+
+		    I=$((I + 1))
+		    sleep "$SAMPLE_INTERVAL"
 		done
 	) &
 	CWND_PID=$!
@@ -102,9 +119,12 @@ for flavor in "${TCP_FLAVORS[@]}"; do
 	wait "$IPERF_PID"
 	echo "iperf3 done."
 
+	kill "$CWND_PID"
+	echo "CWND polling done."
+
 	# Kill ping and CWND PIDs
-	kill "$PING_PID" "$CWND_PID" 2>/dev/null
-	echo "ping and CWND done."
+	kill "$PING_PID"
+	echo "ping done."
 
 	# Avoid flooding network with tests
 	sleep 5
