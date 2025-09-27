@@ -31,8 +31,8 @@ Each test is basically comprised of the following steps:
 
 1. **Running the Tests**
 
-**Note**: You need to run this script with `sudo` to be able to change the TCP flavors.
-    
+    **Note**: You need to run this script with `sudo` to be able to change the TCP flavors.
+
     ```bash
     sudo bash run_tcp_tests.sh <server_ip> <network_card_name> <test_name>
     ```
