@@ -234,15 +234,15 @@ def generate_lan_vs_wlan_graphs(lan_df, wlan_df, location, output_dir):
         # CWND Comparison
         fig, ax = plt.subplots(figsize=(12, 7))
         ax.plot(
-            load_flavor_df["time_iter"],
-            load_flavor_df["cwnd_size_kb"],
+            lan_flavor_df["time_iter"],
+            lan_flavor_df["cwnd_size_kb"],
             marker="o",
             linestyle="-",
             label="LAN",
         )
         ax.plot(
-            noload_flavor_df["time_iter"],
-            noload_flavor_df["cwnd_size_kb"],
+            wlan_flavor_df["time_iter"],
+            wlan_flavor_df["cwnd_size_kb"],
             marker="o",
             linestyle="-",
             label="WLAN",
