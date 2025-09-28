@@ -68,15 +68,14 @@ for flavor in "${TCP_FLAVORS[@]}"; do
 	echo "Starting iperf3 test for $TEST_DURATION seconds..."
 	iperf3 -c "$SERVER_IP" \
 		-t "$TEST_DURATION" \
+		-C "$flavor" \
 		-b 0 \
 		-B "$CLIENT_IP" \
 		-i "$SAMPLE_INTERVAL" \
-		-O 4 \
-		-J >"$IPERF_LOG" &
-	IPERF_PID=$!
+		-J \
+		> "$IPERF_LOG"
 
 	# Wait for iperf3
-	wait "$IPERF_PID"
 	echo "iperf3 done."
 	echo "Test took $SECONDS seconds"
 
