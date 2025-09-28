@@ -65,3 +65,6 @@ Each test is basically comprised of the following steps:
     - `<input_file>`: The CSV file containing the parsed results (default is `combined_results.csv`).
     - `<output_directory>`: The directory to save the generated plots (default is `plots`).
 
+## Reference
+
+For your reference, the file `my_scripts.sh` contains the exact commands I used to run the tests manually, which includes the exact server ips and network card names I used. You will likely need to modify the network card names to match your system.
