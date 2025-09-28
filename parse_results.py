@@ -6,71 +6,38 @@ import json
 import argparse
 
 
-def parse_ping_log(file_path):
-    """
-    Parses a ping.log file to extract RTT
-
-    Returns A list of rtts
-    """
-
-    ping_data = []
-
-    # Regex to find 'time=XX.X ms'
-    ping_regex = re.compile(r"time=([\d\.]+)\s*ms")
-    try:
-        with open(file_path, "r") as f:
-            for line in f:
-                match = ping_regex.search(line)
-                if match:
-                    rtt = float(match.group(1))
-                    ping_data.append(rtt)
-    except (IOError, ValueError) as e:
-        print(f"Warning: Could not parse ping {file_path}. Error: {e}")
-        return []
-    return ping_data
-
-
-def parse_cwnd_log(file_path):
-    """
-    Parses a cwnd.log file to extract the congestion window size.
-
-    Returns A list of integers representing the cwnd_size in bytes.
-    """
-    cwnd_data = []
-    try:
-        with open(file_path, "r") as f:
-            next(f, None)  # Skip header
-            for line in f:
-                parts = line.strip().split(",")
-                if len(parts) == 2:
-                    # The second column is the cwnd_bytes
-                    cwnd_data.append(int(parts[1]))
-    except (IOError, ValueError, IndexError) as e:
-        print(f"Warning: Could not parse cwnd {file_path}. Error: {e}")
-        return []
-    return cwnd_data
-
-
 def parse_iperf_json(file_path):
     """
-    Parses an iperf3.json file to extract throughput/interval.
+    Parses an iperf3.json file to extract throughput, RTT, and CWND data.
 
-    Returns A list of floats representing throughput in bits/second.
+    Returns A tuple of 3 lists of floats representing throughput (bps), RTT (ms), and CWND (bytes).
     """
     throughput_data = []
+    rtt_data = []
+    cwnd_data = []
     try:
         with open(file_path, "r") as f:
             data = json.load(f)
             intervals = data.get("intervals", [])
             for interval in intervals:
                 sum_data = interval.get("sum", {})
+                streams_data = interval.get("streams", [])[0]
+                rtt_ms = streams_data.get("rtt") / 1000.0
+                if rtt_ms is not None:
+                    rtt_data.append(rtt_ms)
+
+                cwnd = streams_data.get("snd_cwnd")
+                if cwnd is not None:
+                    cwnd_data.append(cwnd)
+
                 bits_per_second = sum_data.get("bits_per_second")
                 if bits_per_second is not None:
                     throughput_data.append(bits_per_second)
+
     except (IOError, json.JSONDecodeError) as e:
         print(f"Warning: Could not parse iperf {file_path}. Error: {e}")
         return []
-    return throughput_data
+    return throughput_data, rtt_data, cwnd_data
 
 
 def main():
@@ -110,36 +77,30 @@ def main():
             print(f"Processing {tcp_flavor}...")
 
             # Define file paths
-            ping_file = os.path.join(flavor_path, "ping.log")
-            cwnd_file = os.path.join(flavor_path, "cwnd.log")
             iperf_file = os.path.join(flavor_path, "iperf3.json")
 
             # Check if all required files exist
-            if not all(os.path.exists(f) for f in [ping_file, cwnd_file, iperf_file]):
-                print("Warning: Missing one or more data files. Skipping.")
+            if not os.path.exists(iperf_file):
+                print("Warning: Missing iperf3.json file. Skipping.")
                 continue
 
             # Parse all the data files
-            ping_data = parse_ping_log(ping_file)
-            cwnd_data = parse_cwnd_log(cwnd_file)
-            throughput_data = parse_iperf_json(iperf_file)
+            throughput_data, rtt_data, cwnd_data = parse_iperf_json(iperf_file)
 
-            # Align data lengths (truncate to the shortest)
-            min_len = min(len(ping_data), len(cwnd_data), len(throughput_data))
-            if min_len == 0:
+            if len(throughput_data) == 0:
                 print(
                     "Warning: One or more data files are empty. Skipping.")
                 continue
 
             # Combine the data for this run
-            for i in range(min_len):
+            for i in range(len(throughput_data)):
                 all_results.append(
                     {
                         "test_name": test_name,
                         "tcp_flavor": tcp_flavor,
                         "time_iter": i,
                         "bits_per_second": throughput_data[i],
-                        "rtt_ms": ping_data[i],
+                        "rtt_ms": rtt_data[i],
                         "cwnd_size_bytes": cwnd_data[i],
                     }
                 )

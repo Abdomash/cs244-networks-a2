@@ -25,9 +25,7 @@ mkdir -p "$OUTPUT_DIR"
 cd "$OUTPUT_DIR" || exit 1
 
 # Config
-SERVER_PORT=5201
-CLIENT_PORT=5202
-TEST_DURATION=30 # in seconds
+TEST_DURATION=60 # in seconds
 SAMPLE_INTERVAL=1  # in seconds
 
 # TCP flavors
@@ -60,13 +58,11 @@ for flavor in "${TCP_FLAVORS[@]}"; do
 	echo "Creating directory for $flavor results"
 	mkdir -p "$flavor"
 	IPERF_LOG="$flavor/iperf3.json"
-	PING_LOG="$flavor/ping.log"
-	CWND_LOG="$flavor/cwnd.log"
 
-	# Reset log files (in case of retries)
+	# Reset log files
 	echo "" >"$IPERF_LOG"
-	echo "" >"$PING_LOG"
-	echo "time_sec,cwnd_bytes" >"$CWND_LOG"
+
+	SECONDS=0
 
 	# Run Iperf3
 	echo "Starting iperf3 test for $TEST_DURATION seconds..."
@@ -74,60 +70,18 @@ for flavor in "${TCP_FLAVORS[@]}"; do
 		-t "$TEST_DURATION" \
 		-b 0 \
 		-B "$CLIENT_IP" \
-		--cport "$CLIENT_PORT" \
 		-i "$SAMPLE_INTERVAL" \
 		-O 4 \
 		-J >"$IPERF_LOG" &
 	IPERF_PID=$!
 
-	# Start ping
-	echo "Starting ping to measure RTT..."
-	ping -I "$NIC_NAME" \
-		-i "$SAMPLE_INTERVAL" \
-		"$SERVER_IP" >"$PING_LOG" &
-	PING_PID=$!
-
-	# Start a loop to poll CWND
-	echo "Starting CWND polling..."
-	(
-		# Wait until iperf connects first
-		sleep 3
-		
-		I=0
-		while true; do
-		    CONN_INFO=$(ss -ti "src $CLIENT_IP:$CLIENT_PORT")
-
-		    # Breaks when iperf3 is done
-		    if [ -z "$CONN_INFO" ]; then
-			break
-		    fi
-
-		    # Extract the CWND value
-		    CWND=$(echo "$CONN_INFO" | grep -oP 'cwnd:\K\d+' | head -n 1)
-		    
-		    if [ -n "$CWND" ]; then
-			echo "$I,$CWND" >> "$CWND_LOG"
-		    fi
-
-		    I=$((I + 1))
-		    sleep "$SAMPLE_INTERVAL"
-		done
-	) &
-	CWND_PID=$!
-
 	# Wait for iperf3
 	wait "$IPERF_PID"
 	echo "iperf3 done."
-
-	kill "$CWND_PID"
-	echo "CWND polling done."
-
-	# Kill ping and CWND PIDs
-	kill "$PING_PID"
-	echo "ping done."
+	echo "Test took $SECONDS seconds"
 
 	# Avoid flooding network with tests
-	sleep 5
+	sleep 3
 done
 
 echo

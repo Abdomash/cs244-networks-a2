@@ -41,7 +41,7 @@ def generate_graphs(df, test_name, output_dir):
         flavor_df = df[df["tcp_flavor"] == flavor]
         ax2.plot(
             flavor_df["time_iter"],
-            flavor_df["cwnd_size_bytes"],
+            flavor_df["cwnd_size_kb"],
             marker="o",
             linestyle="-",
             label=flavor,
@@ -49,7 +49,7 @@ def generate_graphs(df, test_name, output_dir):
 
     ax2.set_title(f"CWND Size Comparison for {test_name}", fontsize=16)
     ax2.set_xlabel("Time (s)", fontsize=12)
-    ax2.set_ylabel("Congestion Window Size (Bytes)", fontsize=12)
+    ax2.set_ylabel("Congestion Window Size (KB)", fontsize=12)
     ax2.legend()
     ax2.grid(True)
     plt.tight_layout()
@@ -105,12 +105,12 @@ def generate_graphs(df, test_name, output_dir):
         ax4_thr.set_ylabel("Throughput (Mbps)", fontsize=12, color="tab:blue")
         ax4_cwnd.plot(
             flavor_df["time_iter"],
-            flavor_df["cwnd_size_bytes"],
+            flavor_df["cwnd_size_kb"],
             color="tab:green",
             marker="x",
             linestyle="--",
         )
-        ax4_cwnd.set_ylabel("CWND (Bytes)", fontsize=12, color="tab:green")
+        ax4_cwnd.set_ylabel("CWND (KB)", fontsize=12, color="tab:green")
         ax4_thr.set_title(
             f"Throughput & CWND for {flavor.upper()} in {test_name}", fontsize=16
         )
@@ -145,6 +145,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     df = pd.read_csv(input_file)
     df["throughput_mbps"] = df["bits_per_second"] / 1_000_000
+    df["cwnd_size_kb"] = df["cwnd_size_bytes"] / 1_000
 
     # Get the unique test name and flavors for titles and looping
     test_names = df["test_name"].unique()
